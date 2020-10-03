@@ -20,7 +20,7 @@ country_code="${country_code_with_paren%*\)}"
 
 city="$(echo "$relay_list" | \
         perl -ne '/^(.*)/; $i = length $1; $j && $i >= $j and print, next; $j = 0; /$ENV{country_name}/ and $j = $i + 1, print' | \
-        grep '^\s[A-Z]' | sed 's/^\s*//' | uniq | sort | dmenu -l 10)"
+        grep '^\s[A-Z]' | sed 's/^\s*//' | awk -F '@' '{ print $1 }' | uniq | sort | dmenu -l 10)"
 
 if [ -z "$city" ]; then
     notify-send -a "Mullvad" "Aborted: No city selected."
