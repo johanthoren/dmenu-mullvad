@@ -67,3 +67,27 @@ notify-send -a "Mullvad" \
     "Connecting to ${city_name}, ${country_name} using $proto_msg."
 mullvad relay set tunnel-protocol $protocol > /dev/null 2>&1
 mullvad relay set location $country_code $city_code > /dev/null 2>&1
+
+## Adding connect command + connection check
+# now that relay is updated, proceed to connect
+mullvad connect
+
+# wait for connection to be made so status command returns "Connected"
+sleep 5
+
+# collect current connection info to check for intended connection result
+current_ip=$(mullvad status | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+current_country_code_with_num=$(echo "$relay_list" | grep "$current_ip" | \
+  cut -d "-" -f 1 | xargs)
+current_country_code=${current_country_code_with_num:0:2}
+current_city_code=$(echo "$relay_list" | grep -e '(...)' -e "$current_ip" | \
+  grep -B1 "$current_ip" | head -1 | awk -F'[()]' '{print $2}')
+
+# do the check and notify accordingly
+if [[ $current_country_code = $country_code ]] && \
+   [[ $current_city_code = $city_code ]]; then
+    notify-send -a "Mullvad" "Connected to ${city_name}, ${country_name} using $proto_msg."
+else
+    notify-send -a "Mullvad" "Failed connecting to ${city_name}, ${country_name} \
+    using $proto_msg."
+fi
