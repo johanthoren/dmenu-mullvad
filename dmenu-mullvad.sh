@@ -15,11 +15,21 @@ if uname -a | grep -Eq '20\.04\.[0-9]+-Ubuntu'; then
 fi
 
 country=$(echo "$relay_list" | grep -Evsh '^(#|\s|\t|$)' | uniq | sort | \
-    dmenu_cmd)
+    sed '1s/^/Disconnect\n/' | dmenu_cmd)
 
 if [ -z "$country" ]; then
     notify-send -a "Mullvad" "Aborted: No country selected."
     exit 1
+fi
+
+if [ "$country" = "Disconnect" ]; then
+  if [ "$(pgrep transmission)" ]; then
+    echo "Stopping all active torrents"
+    transmission-remote --torrent all --stop > /dev/null 2>&1
+  fi
+  echo "Disabling mullvad auto-connect" && mullvad auto-connect set off > /dev/null 2>&1
+  echo "Disabling mullvad killswitch" && mullvad always-require-vpn set off > /dev/null 2>&1
+  echo "Disconnecting from mullvad" && mullvad disconnect && exit 0
 fi
 
 country_name="${country%%[[:space:]]\(*}"
@@ -91,3 +101,10 @@ else
     notify-send -a "Mullvad" "Failed connecting to ${city_name}, ${country_name} \
     using $proto_msg."
 fi
+
+if [ "$(pgrep transmission)" ]; then
+  echo "Starting all active torrents"
+  transmission-remote --torrent all --start > /dev/null 2>&1
+fi
+echo "Enabling mullvad auto-connect" && mullvad auto-connect set on > /dev/null 2>&1
+echo "Enabling mullvad killswitch" && mullvad always-require-vpn set on > /dev/null 2>&1
